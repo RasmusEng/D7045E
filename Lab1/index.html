@@ -103,6 +103,8 @@
                 // The array contains color components, with three numbers per vertex.
                 // The color components are just random numbers in the range zero to 1.
                 pointRandomColors[i] = Math.random();
+            }
+            for (let i = 0; i < POINT_COUNT; i++) {
                 pointRandomSize[i] = 16 + 48 * Math.random();
                 let radius = pointRandomSize[i] / 2;
                 let x,y;
@@ -130,8 +132,11 @@
         }
 
         function updatePointCoordsForFrame() { // called during an animation, before each frame.
-            let size = Number(document.getElementById("sizeChoice").value) / 2; // radius
+            let sizeChoice = document.getElementById("sizeChoice").value;
+            let randomSizes = sizeChoice === "random";
+            let fixedRadius = Number(sizeChoice) / 2;
             for (let i = 0; i < 2 * POINT_COUNT; i += 2) { // x-coords
+                let size = randomSizes ? pointRandomSize[i / 2] / 2 : fixedRadius; // radius
                 pointCoords[i] += pointVelocities[i];
                 if (pointCoords[i] - size < 0) {
                     pointCoords[i] = size - (pointCoords[i] - size);// move coord back onto canvas
@@ -143,6 +148,7 @@
                 }
             }
             for (let i = 1; i < 2 * POINT_COUNT; i += 2) { // y-coords
+                let size = randomSizes ? pointRandomSize[(i - 1) / 2] / 2 : fixedRadius; // radius
                 pointCoords[i] += pointVelocities[i];
                 if (pointCoords[i] - size < 0) {
                     pointCoords[i] = size - (pointCoords[i] - size);// move coord back onto canvas
@@ -169,6 +175,7 @@
 
             let randomColors = document.getElementById("colorCheckbox").checked;
             //let  pointsize = Number(document.getElementById("sizeChoice").value);
+            let sizeChoice = document.getElementById("sizeChoice").value;
 
             /* Set up values for the "coords" attribute, giving point's positions */
 
@@ -190,7 +197,14 @@
             /* Set the pointsize uniform variable */
 
             //gl.uniform1f( attributePointSize, pointsize );
-            gl.enableVertexAttribArray(attributePointSize);
+            if (sizeChoice === "random") { // use the attribute values from the size VBO, filled during initialization
+                gl.enableVertexAttribArray(attributePointSize);
+            }
+            else { // turn off vertexAttribArray and set a constant attribute size
+                gl.disableVertexAttribArray(attributePointSize);
+                gl.vertexAttrib1f(attributePointSize, Number(sizeChoice));
+            }
+
             /* Draw all the points with one command. */
 
             gl.drawArrays(gl.POINTS, 0, POINT_COUNT);
@@ -345,6 +359,7 @@
                 <option value="16">Small</option>
                 <option value="32">Medium</option>
                 <option value="64">Large</option>
+                <option value="random">Random</option>
             </select></label>
     </p>
 
