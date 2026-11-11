@@ -80,10 +80,7 @@
         let lastTime = null;  // timestamp of last frame, in milliseconds
         let randomVelocity = 60 + 180 * Math.random();   // was 1 + 3 * Math.random()
 
-        /* Data for the points, including their coordinates, velocities and colors.
-           The values for the arrays are created during initialization.  The random
-           colors are used when the user selects colored rather than red points.
-           The positions of the points are updated for each frame of the animation. */
+        /* Data for the points, including their coordinates, velocities and colors. The values for the arrays are created during initialization.  The random colors are used when the user selects colored rather than red points. The positions of the points are updated for each frame of the animation. */
 
         let POINT_COUNT;  // number of points to draw, read from the "pointCount" input in createPointData()
         let pointCoords;
@@ -98,7 +95,7 @@
             let collisionType = document.getElementById("collisionType").value;
             let countInput = document.getElementById("pointCount");
             // Head-on and Angle are always one pair of disks, so the count input only applies to Random.
-            let twoDisks = collisionType === "straight" || collisionType === "angle";
+            let twoDisks = collisionType === "straight" || collisionType === "angle" || collisionType === "straightOffset";
             document.getElementById("pointCountLabel").hidden = twoDisks;
             if (twoDisks) {
                 POINT_COUNT = 2;
@@ -140,6 +137,9 @@
             else if (collisionType === "angle") {
                 spawnAngledPair();
             }
+            else if (collisionType === "straightOffset"){
+                spawnHeadOnPairOffset();
+            }
 
             for (let i = pairedCount; i < POINT_COUNT; i++) {
                 let radius = pointRandomSize[i] / 2;
@@ -155,6 +155,19 @@
             }
         }
 
+        function overlapsPlacedPoints(x, y, radius, placedCount) {
+            for (let j = 0; j < placedCount; j++) {
+                let xx = x - pointCoords[2 * j];
+                let yy = y - pointCoords[2 * j + 1];
+                let minDist = radius + pointRandomSize[j] / 2;
+                if (xx * xx + yy * yy < minDist * minDist) {
+                    return true;
+                }
+
+            }
+            return false;
+        }
+
         /**
          * Places points 0 and 1 against the left and right walls, at mid-height,
          * moving straight towards each other.
@@ -164,13 +177,28 @@
             let randomSizes = sizeChoice === "random";
             let radiusLeft = randomSizes ? pointRandomSize[0] / 2 : Number(sizeChoice) / 2;
             let radiusRight = randomSizes ? pointRandomSize[1] / 2 : Number(sizeChoice) / 2;
+            pointCoords[0] = radiusLeft + 100 ;
+            pointCoords[1] = (canvas.height / 2 );
+            pointCoords[2] = canvas.width - radiusRight - 100;
+            pointCoords[3] = canvas.height / 2;
+            pointVelocities[0] = 2;
+            pointVelocities[1] = 0;
+            pointVelocities[2] = -2;
+            pointVelocities[3] = 0;
+        }
+
+        function spawnHeadOnPairOffset() {
+            let sizeChoice = document.getElementById("sizeChoice").value;
+            let randomSizes = sizeChoice === "random";
+            let radiusLeft = randomSizes ? pointRandomSize[0] / 2 : Number(sizeChoice) / 2;
+            let radiusRight = randomSizes ? pointRandomSize[1] / 2 : Number(sizeChoice) / 2;
             pointCoords[0] = radiusLeft;
-            pointCoords[1] = canvas.height / 2;
+            pointCoords[1] = (canvas.height / 2 ) + radiusLeft;
             pointCoords[2] = canvas.width - radiusRight;
             pointCoords[3] = canvas.height / 2;
-            pointVelocities[0] = 1;
+            pointVelocities[0] = 2;
             pointVelocities[1] = 0;
-            pointVelocities[2] = -1;
+            pointVelocities[2] = -2;
             pointVelocities[3] = 0;
         }
 
@@ -201,24 +229,10 @@
             return x >= margin && x <= canvas.width - margin && y >= margin && y <= canvas.height - margin;
         }
 
-        function overlapsPlacedPoints(x, y, radius, placedCount) {
-            for (let j = 0; j < placedCount; j++) {
-                let xx = x - pointCoords[2 * j];
-                let yy = y - pointCoords[2 * j + 1];
-                let minDist = radius + pointRandomSize[j] / 2;
-                if (xx * xx + yy * yy < minDist * minDist) {
-                    return true;
-                }
 
-            }
-            return false;
-        }
-
-        /**
+        /*
          * Returns the pairs of points that overlap, as an array of [i, j] with i < j.
-         * Two circles overlap when the distance between their centers is less than
-         * the sum of their radii.  Squared distances are compared to avoid a square root.
-         */
+         * Two circles overlap when the distance between their centers is less than */
         function findCollidingPairs() {
             let sizeChoice = document.getElementById("sizeChoice").value;
             let randomSizes = sizeChoice === "random";
@@ -558,10 +572,13 @@
                 if (document.getElementById("collisionType").value === "straight") {
                     respawnPoints();  // the disks need to start against the walls at their new size
                 }
-                if (document.getElementById("collisionType").value === "angle") {
+                else if (document.getElementById("collisionType").value === "straightOffset") {
+                    respawnPoints();  // the disks need to start against the walls at their new size
+                }
+                else if (document.getElementById("collisionType").value === "angle") {
                     respawnPoints();
                 }
-                else if (!animating) {
+                if (!animating) {
                     draw();
                 }
             };
@@ -594,12 +611,13 @@
         </label>
         <label><b>Spawn:</b>&nbsp;<select id="collisionType">
                 <option value="straight">Head-on</option>
+                <option value="straightOffset">Head-on with offset</option>
                 <option value="angle">Angle</option>
                 <option value="random">Random</option>
             </select>
         </label>
-        <label id="pointCountLabel"><b>Point Count:</b>&nbsp;<input type="number" id="pointCount" value="100" min="1"
-                max="1000" step="1"></label>
+        <label id="pointCountLabel"><b>Point Count:</b>&nbsp;<input type="number" id="pointCount" value="20" min="1"
+                max="100" step="1"></label>
         <label></label>
     </p>
 
