@@ -55,7 +55,7 @@
             "   }\n" +
             "   if ( distanceFromCenter * v_pointsize < 4.0 ) {\n" +
             "       gl_FragColor = vec4(0, 0, 0, 1);\n" +
-            "       return;\n" + 
+            "       return;\n" +
             "   }\n" +
             "   gl_FragColor = vec4(v_color, 1.0);\n" +
             "}\n";
@@ -106,27 +106,33 @@
             }
             for (let i = 0; i < POINT_COUNT; i++) {
                 pointRandomSize[i] = 16 + 48 * Math.random();
-                let radius = pointRandomSize[i] / 2;
-                let x,y;
+                let radius = currentRadius(i);
+                let x, y;
                 let attempts = 0;
                 do {
-                    x = radius + (canvas.width - 2*radius) * Math.random();
-                    y = radius + (canvas.height - 2*radius) * Math.random();
+                    x = radius + (canvas.width - 2 * radius) * Math.random();
+                    y = radius + (canvas.height - 2 * radius) * Math.random();
                     attempts++;
                 } while (overlapsPlacedPoints(x, y, radius, i) && attempts < 1000);
-                pointCoords[2*i] = x;
-                pointCoords[2*i+1] = y;
+                pointCoords[2 * i] = x;
+                pointCoords[2 * i + 1] = y;
             }
         }
 
-        function overlapsPlacedPoints(x, y, radius, placedCount){
-            for (let j = 0; j < placedCount; j++){
+        function currentRadius(i) {
+            let sizeChoice = document.getElementById("sizeChoice").value;
+            return sizeChoice === "random" ? pointRandomSize[i] / 2 : Number(sizeChoice) / 2;
+        }
+
+        function overlapsPlacedPoints(x, y, radius, placedCount) {
+            for (let j = 0; j < placedCount; j++) {
                 let xx = x - pointCoords[2 * j];
                 let yy = y - pointCoords[2 * j + 1];
-                let minDist = radius + pointRandomSize[j] / 2;
-                if (xx*xx + yy*yy < minDist*minDist){
+                let minDist = radius + currentRadius(j);
+                if (xx * xx + yy * yy < minDist * minDist) {
                     return true;
                 }
+
             }
             return false;
         }
@@ -269,6 +275,18 @@
 
         }
 
+        
+        function uploadPointData() { // sends the colors and sizes to their VBOs.
+            gl.bindBuffer(gl.ARRAY_BUFFER, bufferColor);
+            gl.bufferData(gl.ARRAY_BUFFER, pointRandomColors, gl.STREAM_DRAW);
+            gl.vertexAttribPointer(attributeColor, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, bufferPointSize);
+            gl.bufferData(gl.ARRAY_BUFFER, pointRandomSize, gl.STREAM_DRAW);
+            gl.vertexAttribPointer(attributePointSize, 1, gl.FLOAT, false, 0, 0);
+
+        }
+
         /*------------ Animation support ------------*/
 
         function doFrame() {
@@ -313,6 +331,7 @@
                     "<p>Sorry, could not get a WebGL graphics context.</p>";
                 return;
             }
+            document.getElementById("sizeChoice").value = "32";
             try {
                 initGL();  // initialize the WebGL graphics context
             }
@@ -323,21 +342,22 @@
             }
             document.getElementById("animateCheckbox").checked = false;
             document.getElementById("colorCheckbox").checked = true;
-            document.getElementById("sizeChoice").value = "32";
+            function respawnPoints() {
+                createPointData();  // new random sizes and positions
+                uploadPointData();  // send the new sizes/colors to the GPU
+                if (!animating) {
+                    draw();
+                }
+            }
             document.getElementById("animateCheckbox").onchange = doAnimationCheckbox;
             document.getElementById("colorCheckbox").onchange = function () {
                 if (!animating) {
                     draw();
                 }
             };
-            document.getElementById("sizeChoice").onchange = function () {
-                if (!animating) {
-                    draw();
-                }
-            };
+            document.getElementById("sizeChoice").onchange = respawnPoints;
             draw();  // animation is off by default, so draw the first frame here
         }
-
 
         window.onload = init;  // Arrange for init() to be called after page has loaded.
 
@@ -358,9 +378,10 @@
         <label><b>Point Size:</b>&nbsp;<select id="sizeChoice">
                 <option value="16">Small</option>
                 <option value="32">Medium</option>
-                <option value="64">Large</option>
+                <option value="48">Large</option>
                 <option value="random">Random</option>
             </select></label>
+        <a href="col1.html" target="_blank"><button>Collisions</button></a>
     </p>
 
     <div id="canvas-holder">
